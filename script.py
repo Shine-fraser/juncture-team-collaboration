@@ -1,4 +1,5 @@
 import parameters
+import re
 from time import sleep
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -42,7 +43,7 @@ search_query.send_keys(parameters.search_query)
 sleep(0.5)
 
 search_query.send_keys(Keys.RETURN)
-sleep(3)
+sleep(2)
 
 # get profile urls as a list
 linkedin_urls = driver.find_elements('xpath', "//div[@class='yuRUbf']/a")
@@ -59,23 +60,33 @@ location_list = []
 
 for url in url_list:
     driver.get(url)
-    sleep(2)
+    sleep(2)   #set delay to load the data
     page_source = BeautifulSoup(driver.page_source, "lxml")
     info_div = page_source.find("div", class_="ph5 pb5")
-    name = page_source.find("h1", "text-heading-xlarge").get_text()
+    name = info_div.find("h1", class_="text-heading-xlarge").get_text().strip()
     location = info_div.find("span", class_="text-body-small inline t-black--light break-words").get_text().strip()
-
-    #get contact info link first
-    contact = page_source.find_all("a", id_="top-card-text-details-contact-info")
-    contact.get('href')
     name_list.append(name)
     location_list.append(location)
+print(name_list)
+print(location_list)
 
 
-# contact_list = []
-# driver.get(url_list[0])
-# sleep(2)
-# page_source = BeautifulSoup(driver.page_source, "lxml")
-# contact = page_source.find(class_="ember-view link-without-visited-state cursor-pointer text-heading-small inline-block break-words", href=True)
-# contact = contact.get('href')
-# driver.get(contact)
+#get Contact Info link from a profile 
+driver.get("https://www.linkedin.com/in/chandramouleeswaran-sankaran-mouli-b174611?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BPA9pZzzBSMyQrD2hcyjEQw%3D%3D")
+sleep(2)   #set delay to load the data
+page_source = BeautifulSoup(driver.page_source, "lxml")
+contact_info = page_source.find(
+    class_="ember-view link-without-visited-state cursor-pointer text-heading-small inline-block break-words", href=True)
+contact_info = contact_info.get('href')
+print(contact_info)
+
+
+
+#get email from Contact Info
+driver.get("https://linkedin.com" + contact_info)
+sleep(2)   #set delay to load the data
+page_source = BeautifulSoup(driver.page_source, "lxml")
+info_div = page_source.find("div", id="artdeco-modal-outlet")
+email = info_div.find(class_="pv-contact-info__contact-link link-without-visited-state t-14", href=re.compile("mailto:"))
+email = email.get('href')[7:]
+print(email)
