@@ -1,5 +1,5 @@
 import parameters
-import re
+from function import getEmail, getUrl
 from time import sleep
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -33,7 +33,7 @@ log_in_button = driver.find_element(
     'class name', 'sign-in-form__submit-button')
 # .click() to mimic button click
 log_in_button.click()
-sleep(3)
+sleep(2)
 
 driver.get('https://www.google.com')
 sleep(1)
@@ -43,50 +43,57 @@ search_query.send_keys(parameters.search_query)
 sleep(0.5)
 
 search_query.send_keys(Keys.RETURN)
-sleep(2)
+sleep(1)
 
+pageUrl_list = []
 # get profile urls as a list
-linkedin_urls = driver.find_elements('xpath', "//div[@class='yuRUbf']/a")
 url_list = []
-for url in linkedin_urls:
-    profile_url = url.get_attribute("href")
-    if('linkedin.com/in' in profile_url):  # check if url is real profile url or not
-        url_list.append(url.get_attribute("href"))
+
+#get first search result's profile urls
+getUrl(driver, url_list)
+
+
+#get urls of other search pages
+page_source = BeautifulSoup(driver.page_source, "lxml")
+page_source = page_source.find("div", class_="GyAeWb")
+page_source = page_source.find("div", role="navigation")
+links = page_source.findAll("a")
+for link in links :
+    link_href = link.get('href')
+    pageUrl_list.append(link_href)
+# print(pageUrl_list)
+
+
+#get profile urls from pages one by one starting from page 2
+#till page 10
+for i in range(len(pageUrl_list)-1): 
+    driver.get('https://www.google.com' + pageUrl_list[i])
+    getUrl(driver, url_list)
+
 print(url_list)
+print(len(url_list))
+
 
 
 name_list = []
 location_list = []
-
-for url in url_list:
+email_list = []
+for url in url_list[:20]:
     driver.get(url)
-    sleep(2)   #set delay to load the data
+    sleep(1)   #set delay to load the data
     page_source = BeautifulSoup(driver.page_source, "lxml")
-    info_div = page_source.find("div", class_="ph5 pb5")
-    name = info_div.find("h1", class_="text-heading-xlarge").get_text().strip()
+    info_div = page_source.find("div", class_="ph5")
+    name = info_div.find("h1", class_="text-heading-xlarge inline t-24 v-align-middle break-words").get_text().strip()
     location = info_div.find("span", class_="text-body-small inline t-black--light break-words").get_text().strip()
     name_list.append(name)
     location_list.append(location)
-print(name_list)
-print(location_list)
+    email = getEmail(driver)
+    email_list.append(email)
+    print(name + ', '+ location + ', ' + email) 
 
-
-#get Contact Info link from a profile 
-driver.get("https://www.linkedin.com/in/chandramouleeswaran-sankaran-mouli-b174611?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BPA9pZzzBSMyQrD2hcyjEQw%3D%3D")
-sleep(2)   #set delay to load the data
-page_source = BeautifulSoup(driver.page_source, "lxml")
-contact_info = page_source.find(
-    class_="ember-view link-without-visited-state cursor-pointer text-heading-small inline-block break-words", href=True)
-contact_info = contact_info.get('href')
-print(contact_info)
+# print(name_list)
+# print(location_list)
+# print(email_list)
 
 
 
-#get email from Contact Info
-driver.get("https://linkedin.com" + contact_info)
-sleep(2)   #set delay to load the data
-page_source = BeautifulSoup(driver.page_source, "lxml")
-info_div = page_source.find("div", id="artdeco-modal-outlet")
-email = info_div.find(class_="pv-contact-info__contact-link link-without-visited-state t-14", href=re.compile("mailto:"))
-email = email.get('href')[7:]
-print(email)
